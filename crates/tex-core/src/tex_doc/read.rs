@@ -2,17 +2,15 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
+use docx::{
+    attribute_value, detect_heading_level, extract_paragraph_text, has_tag, is_f8_cite_style,
+    is_probable_author_line, path_display, read_style_map, read_zip_file, run_has_active_underline,
+    run_has_property, run_highlight_class, run_style_id, run_style_name,
+};
 use roxmltree::Node;
 use zip::ZipArchive;
 
-use crate::docx_parse::{
-    attribute_value, detect_heading_level, extract_paragraph_text, has_tag, is_f8_cite_style,
-    read_style_map, read_zip_file, run_has_active_underline, run_has_property, run_highlight_class,
-    run_style_id, run_style_name,
-};
-use crate::types::{TexBlock, TexDocumentPayload, TexTextRun};
-use crate::util::{is_probable_author_line, path_display};
-use crate::CommandResult;
+use crate::{CommandResult, TexBlock, TexDocumentPayload, TexTextRun};
 
 fn paragraph_style_id(paragraph: Node<'_, '_>) -> Option<String> {
     let paragraph_props = paragraph.children().find(|node| has_tag(*node, "pPr"))?;
@@ -161,4 +159,119 @@ pub fn open_tex_document(file_path: &Path) -> CommandResult<TexDocumentPayload> 
         paragraph_count: i64::try_from(blocks.len()).unwrap_or(0),
         blocks,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::Write;
+
+    use docx::{create_blank_docx, rewrite_docx_with_parts};
+    use zip::write::SimpleFileOptions;
+
+    use super::open_tex_document;
+
+    fn temp_path(label: &str) -> std::path::PathBuf {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("tex-read-{label}-{timestamp}.docx"))
+    }
+
+    #[test]
+    fn opens_headings_and_formats_runs() {
+        let path = temp_path("formats");
+        create_blank_docx(&path).unwrap();
+        let document_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr><w:pStyle w:val="Heading2"/></w:pPr>
+      <w:r><w:t>Case</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr><w:b/><w:highlight w:val="yellow"/></w:rPr>
+        <w:t>Tagged</w:t>
+      </w:r>
+    </w:p>
+    <w:sectPr/>
+  </w:body>
+</w:document>"#;
+        let styles_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="Heading 2"/></w:style>
+</w:styles>"#;
+        let replacements = HashMap::from([
+            ("word/document.xml".to_string(), document_xml.as_bytes().to_vec()),
+            ("word/styles.xml".to_string(), styles_xml.as_bytes().to_vec()),
+        ]);
+        rewrite_docx_with_parts(&path, &replacements).unwrap();
+
+        let document = open_tex_document(&path).unwrap();
+        assert_eq!(document.paragraph_count, 2);
+        assert_eq!(document.blocks[0].kind, "heading");
+        assert_eq!(document.blocks[0].level, Some(2));
+        assert!(document.blocks[1].runs[0].bold);
+        assert_eq!(document.blocks[1].runs[0].highlight_color.as_deref(), Some("yellow"));
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn author_lines_do_not_become_headings() {
+        let path = temp_path("author-line");
+        create_blank_docx(&path).unwrap();
+        let document_xml = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:pPr><w:pStyle w:val="Heading2"/></w:pPr>
+      <w:r><w:t>Jane Doe, Example University, 2024 archive edition</w:t></w:r>
+    </w:p>
+    <w:sectPr/>
+  </w:body>
+</w:document>"#;
+        let replacements =
+            HashMap::from([("word/document.xml".to_string(), document_xml.as_bytes().to_vec())]);
+        rewrite_docx_with_parts(&path, &replacements).unwrap();
+
+        let document = open_tex_document(&path).unwrap();
+        assert_eq!(document.blocks[0].kind, "paragraph");
+        assert_eq!(document.blocks[0].level, None);
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn rejects_invalid_xml_with_stable_error() {
+        let path = temp_path("invalid-xml");
+        create_blank_docx(&path).unwrap();
+        let replacements = HashMap::from([("word/document.xml".to_string(), b"<w:document".to_vec())]);
+        rewrite_docx_with_parts(&path, &replacements).unwrap();
+
+        let error = open_tex_document(&path).unwrap_err();
+        assert!(error.contains("Could not parse XML"));
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn rejects_missing_document_xml() {
+        let path = temp_path("missing-document");
+        let file = File::create(&path).unwrap();
+        let mut writer = zip::ZipWriter::new(file);
+        writer
+            .start_file("[Content_Types].xml", SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(b"<Types/>").unwrap();
+        writer.finish().unwrap();
+
+        let error = open_tex_document(&path).unwrap_err();
+        assert!(error.contains("Missing word/document.xml"));
+
+        let _ = std::fs::remove_file(path);
+    }
 }

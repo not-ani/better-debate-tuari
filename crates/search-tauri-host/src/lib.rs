@@ -4,8 +4,6 @@ use std::sync::Arc;
 use serde_json::Value;
 use tauri::{Emitter, Manager};
 
-pub mod tex_sessions;
-
 fn resolve_resource_dir(app: &tauri::AppHandle, manifest_dir: &str) -> Result<PathBuf, String> {
     let dev_resources = Path::new(manifest_dir).join("resources");
     if dev_resources.exists() {
@@ -24,9 +22,8 @@ pub fn configure_backend(app: &tauri::AppHandle, manifest_dir: &str) -> Result<(
         .app_data_dir()
         .map_err(|error| format!("Could not resolve app data directory: {error}"))?;
     let resource_dir = resolve_resource_dir(app, manifest_dir)?;
-    let session_store = tex_sessions::create_store(app_data_dir.clone())?;
 
-    better_debate_core::set_event_callback(Some(Arc::new({
+    search_core::set_event_callback(Some(Arc::new({
         let app = app.clone();
         move |event, payload_json| {
             let payload = serde_json::from_str::<Value>(&payload_json)
@@ -35,8 +32,7 @@ pub fn configure_backend(app: &tauri::AppHandle, manifest_dir: &str) -> Result<(
         }
     })));
 
-    app.manage(session_store);
-    better_debate_core::configure(app_data_dir, Some(resource_dir))
+    search_core::configure(app_data_dir, Some(resource_dir))
 }
 
 pub mod commands {
@@ -45,7 +41,10 @@ pub mod commands {
     #[tauri::command]
     pub async fn invoke_core_rpc(command: String, args: Option<Value>) -> Result<Value, String> {
         tauri::async_runtime::spawn_blocking(move || {
-            better_debate_core::invoke(command, args.unwrap_or(Value::Object(Default::default())))
+            search_core::invoke(
+                command,
+                args.unwrap_or(Value::Object(Default::default())),
+            )
         })
         .await
         .map_err(|error| format!("Core task failed to join: {error}"))?

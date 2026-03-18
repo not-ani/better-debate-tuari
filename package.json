@@ -7,10 +7,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:blockvault": "bun run --cwd apps/blockvault tauri dev",
-    "dev:tex": "bun run --cwd apps/tex tauri dev",
-    "build:blockvault": "bun run --cwd apps/blockvault tauri build",
-    "build:tex": "bun run --cwd apps/tex tauri build",
+    "dev:blockvault": "bun run --cwd apps/blockvault dev",
+    "dev:tex": "bun run --cwd apps/tex dev",
+    "build:blockvault": "bun run --cwd apps/blockvault build",
+    "build:tex": "bun run --cwd apps/tex build",
     "build:ui-solid": "bun run --cwd packages/ui-solid build",
     "build:tex-ui": "bun run --cwd packages/tex-ui-solid build"
   }

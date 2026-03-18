@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
-use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use docx_rs::Docx;
+use docx::{create_blank_docx, rewrite_docx_with_parts};
 use roxmltree::{Document, Node};
 use zip::ZipArchive;
 
@@ -16,15 +15,6 @@ use crate::util::{is_probable_author_line, path_display};
 use crate::CommandResult;
 
 const CITATION_STYLE_PLACEHOLDER: &str = "__BF_CITATION_STYLE__";
-const VERBATIM_TEMPLATE_DOTM: &[u8] = include_bytes!("../resources/Debate.dotm");
-const VERBATIM_TEMPLATE_PARTS: &[&str] = &[
-    "word/styles.xml",
-    "word/theme/theme1.xml",
-    "word/fontTable.xml",
-    "word/settings.xml",
-    "word/webSettings.xml",
-    "word/numbering.xml",
-];
 
 pub(crate) fn xml_escape_text(value: &str) -> String {
     value
@@ -220,43 +210,6 @@ pub(crate) fn extract_styled_section(
         relationship_ids,
         used_source_xml: true,
     }
-}
-
-pub(crate) fn create_blank_docx(capture_path: &Path) -> CommandResult<()> {
-    let mut output = File::create(capture_path).map_err(|error| {
-        format!(
-            "Could not create capture docx '{}': {error}",
-            path_display(capture_path)
-        )
-    })?;
-    Docx::new().build().pack(&mut output).map_err(|error| {
-        format!(
-            "Could not initialize capture docx '{}': {error}",
-            path_display(capture_path)
-        )
-    })?;
-
-    apply_verbatim_template_parts(capture_path)
-}
-
-fn apply_verbatim_template_parts(capture_path: &Path) -> CommandResult<()> {
-    let cursor = Cursor::new(VERBATIM_TEMPLATE_DOTM);
-    let mut archive = ZipArchive::new(cursor)
-        .map_err(|error| format!("Could not read bundled Verbatim template: {error}"))?;
-    let mut replacements = HashMap::new();
-
-    for part_name in VERBATIM_TEMPLATE_PARTS {
-        let mut entry = archive.by_name(part_name).map_err(|error| {
-            format!("Bundled Verbatim template is missing '{part_name}': {error}")
-        })?;
-        let mut bytes = Vec::new();
-        entry.read_to_end(&mut bytes).map_err(|error| {
-            format!("Could not read '{part_name}' from bundled Verbatim template: {error}")
-        })?;
-        replacements.insert((*part_name).to_string(), bytes);
-    }
-
-    rewrite_docx_with_parts(capture_path, &replacements)
 }
 
 pub(crate) fn ensure_valid_capture_docx(capture_path: &Path) -> CommandResult<()> {
@@ -784,101 +737,6 @@ fn apply_citation_style_placeholders(
     for paragraph in paragraph_xml.iter_mut() {
         if paragraph.contains(CITATION_STYLE_PLACEHOLDER) {
             *paragraph = paragraph.replace(CITATION_STYLE_PLACEHOLDER, &escaped_style_id);
-        }
-    }
-}
-
-pub(crate) fn rewrite_docx_with_parts(
-    capture_path: &Path,
-    replacements: &HashMap<String, Vec<u8>>,
-) -> CommandResult<()> {
-    let source_file = File::open(capture_path).map_err(|error| {
-        format!(
-            "Could not open capture docx '{}' for update: {error}",
-            path_display(capture_path)
-        )
-    })?;
-    let mut archive = ZipArchive::new(source_file).map_err(|error| {
-        format!(
-            "Could not read capture docx '{}' for update: {error}",
-            path_display(capture_path)
-        )
-    })?;
-
-    let temp_path = capture_path.with_extension("docx.tmp");
-    let temp_file = File::create(&temp_path).map_err(|error| {
-        format!(
-            "Could not create temporary capture file '{}': {error}",
-            path_display(&temp_path)
-        )
-    })?;
-    let mut writer = zip::ZipWriter::new(temp_file);
-    let mut copied_names = HashSet::new();
-
-    for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|error| format!("Could not read capture docx entry: {error}"))?;
-        let name = entry.name().to_string();
-        if entry.is_dir() {
-            continue;
-        }
-
-        let options =
-            zip::write::SimpleFileOptions::default().compression_method(entry.compression());
-        writer
-            .start_file(name.clone(), options)
-            .map_err(|error| format!("Could not write capture zip entry '{name}': {error}"))?;
-
-        if let Some(updated_bytes) = replacements.get(&name) {
-            writer
-                .write_all(updated_bytes)
-                .map_err(|error| format!("Could not write capture zip entry '{name}': {error}"))?;
-        } else {
-            let mut original = Vec::new();
-            entry
-                .read_to_end(&mut original)
-                .map_err(|error| format!("Could not read capture zip entry '{name}': {error}"))?;
-            writer
-                .write_all(&original)
-                .map_err(|error| format!("Could not write capture zip entry '{name}': {error}"))?;
-        }
-
-        copied_names.insert(name);
-    }
-
-    for (name, updated_bytes) in replacements {
-        if copied_names.contains(name) {
-            continue;
-        }
-
-        writer
-            .start_file(name, zip::write::SimpleFileOptions::default())
-            .map_err(|error| format!("Could not add capture zip entry '{name}': {error}"))?;
-        writer
-            .write_all(updated_bytes)
-            .map_err(|error| format!("Could not add capture zip entry '{name}': {error}"))?;
-    }
-
-    writer
-        .finish()
-        .map_err(|error| format!("Could not finish capture zip rewrite: {error}"))?;
-
-    match fs::rename(&temp_path, capture_path) {
-        Ok(()) => Ok(()),
-        Err(_) => {
-            fs::remove_file(capture_path).map_err(|error| {
-                format!(
-                    "Could not replace capture docx '{}': {error}",
-                    path_display(capture_path)
-                )
-            })?;
-            fs::rename(&temp_path, capture_path).map_err(|error| {
-                format!(
-                    "Could not move updated capture docx into place '{}': {error}",
-                    path_display(capture_path)
-                )
-            })
         }
     }
 }

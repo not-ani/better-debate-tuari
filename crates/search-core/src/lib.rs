@@ -165,14 +165,10 @@ mod query_engine;
 mod search;
 mod search_engine;
 mod semantic;
-mod tex_commands;
-mod tex_doc;
 mod types;
 mod util;
 mod vector;
 pub use runtime::{set_event_callback, AppHandle, Emitter, Manager};
-pub use tex_doc::{open_tex_document, save_tex_document};
-pub use types::{TexBlock, TexDocumentPayload, TexTextRun};
 
 pub mod async_runtime {
     pub use crate::runtime::async_runtime::{block_on, spawn, spawn_blocking};
@@ -521,18 +517,38 @@ fn invoke_command(request: InvokeRequest) -> CommandResult<Value> {
                 args.include_semantic,
             ))?)
         }
-        "open_tex_document" => {
-            let args: tex_commands::OpenTexDocumentArgs = parse_args(args)?;
-            to_json_value(tex_commands::open_document(app, args.file_path)?)
-        }
-        "save_tex_document" => {
-            let args: tex_commands::SaveTexDocumentArgs = parse_args(args)?;
-            to_json_value(tex_commands::save_document(
-                app,
-                args.file_path,
-                args.blocks,
-            )?)
-        }
         _ => Err(format!("Unknown command: {command}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{invoke, set_app_handle, AppHandle};
+    use serde_json::json;
+
+    fn configure_test_app(label: &str) {
+        let root = std::env::temp_dir().join(format!(
+            "search-core-test-{label}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        set_app_handle(AppHandle::new(root, None)).unwrap();
+    }
+
+    #[test]
+    fn invoke_reports_unknown_commands() {
+        configure_test_app("unknown");
+        let error = invoke("definitely_unknown_command".to_string(), json!({})).unwrap_err();
+        assert!(error.contains("Unknown command"));
+    }
+
+    #[test]
+    fn invoke_reports_argument_parse_failures() {
+        configure_test_app("parse");
+        let error = invoke("list_roots".to_string(), json!("wrong-shape")).unwrap_err();
+        assert!(error.contains("Could not parse command args"));
     }
 }

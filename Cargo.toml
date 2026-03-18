@@ -1,7 +1,10 @@
 [workspace]
 members = [
-  "crates/better-debate-core",
-  "crates/better-debate-tauri-host",
+  "crates/docx",
+  "crates/search-core",
+  "crates/search-tauri-host",
+  "crates/tex-core",
+  "crates/tex-tauri-host",
   "apps/blockvault/src-tauri",
   "apps/tex/src-tauri"
 ]

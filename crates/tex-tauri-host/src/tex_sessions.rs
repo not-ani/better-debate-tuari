@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use better_debate_core::{open_tex_document, save_tex_document, TexBlock, TexDocumentPayload};
+use tex_core::{open_tex_document, save_tex_document, TexBlock, TexDocumentPayload};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -1741,5 +1741,154 @@ mod tests {
             .unwrap_err();
 
         assert!(error.contains("Tag depth"));
+    }
+
+    #[test]
+    fn update_session_rejects_stale_versions() {
+        let temp_root = std::env::temp_dir()
+            .join(format!("tex-session-test-{}", generate_session_id("stale-version")));
+        let mut store = TexSessionStore::new(temp_root.clone()).unwrap();
+        let session_id = "session-stale".to_string();
+        let document = sample_document("/tmp/stale.docx", "stale.docx");
+        store.sessions.insert(
+            session_id.clone(),
+            TexSessionRecord {
+                snapshot: snapshot_from_document(session_id.clone(), 3, false, document.clone()),
+                owner_window_label: Some("main".to_string()),
+                attached_windows: HashSet::from(["main".to_string()]),
+                updated_at_ms: now_ms(),
+                persistence_path: store.session_path(&session_id),
+                pending_popout_target: None,
+            },
+        );
+
+        let error = store
+            .update_session(session_id, "main".to_string(), 2, document)
+            .unwrap_err();
+
+        assert!(error.contains("stale"));
+        fs::remove_dir_all(temp_root).unwrap();
+    }
+
+    #[test]
+    fn attach_session_reports_owner_conflict_for_second_writer() {
+        let temp_root = std::env::temp_dir()
+            .join(format!("tex-session-test-{}", generate_session_id("owner-conflict")));
+        let mut store = TexSessionStore::new(temp_root.clone()).unwrap();
+        let session_id = "session-owner".to_string();
+        store.sessions.insert(
+            session_id.clone(),
+            TexSessionRecord {
+                snapshot: snapshot_from_document(
+                    session_id.clone(),
+                    0,
+                    false,
+                    sample_document("/tmp/owner.docx", "owner.docx"),
+                ),
+                owner_window_label: Some("main".to_string()),
+                attached_windows: HashSet::from(["main".to_string()]),
+                updated_at_ms: now_ms(),
+                persistence_path: store.session_path(&session_id),
+                pending_popout_target: None,
+            },
+        );
+
+        let (result, popout_event) = store
+            .attach_session(
+                session_id,
+                "secondary".to_string(),
+                TexSessionRequestRole::Writer,
+            )
+            .unwrap();
+
+        assert!(matches!(result, TexSessionAttachResult::OwnerConflict { .. }));
+        assert!(popout_event.is_none());
+        fs::remove_dir_all(temp_root).unwrap();
+    }
+
+    #[test]
+    fn prepare_popout_allows_writer_handoff_to_target_window() {
+        let temp_root = std::env::temp_dir()
+            .join(format!("tex-session-test-{}", generate_session_id("popout-handoff")));
+        let mut store = TexSessionStore::new(temp_root.clone()).unwrap();
+        let session_id = "session-popout".to_string();
+        store.sessions.insert(
+            session_id.clone(),
+            TexSessionRecord {
+                snapshot: snapshot_from_document(
+                    session_id.clone(),
+                    0,
+                    false,
+                    sample_document("/tmp/popout.docx", "popout.docx"),
+                ),
+                owner_window_label: Some("main".to_string()),
+                attached_windows: HashSet::from(["main".to_string()]),
+                updated_at_ms: now_ms(),
+                persistence_path: store.session_path(&session_id),
+                pending_popout_target: None,
+            },
+        );
+
+        let target = store
+            .prepare_popout(
+                session_id.clone(),
+                "main".to_string(),
+                "popout".to_string(),
+            )
+            .unwrap();
+        assert_eq!(target.window_label, "popout");
+
+        let (result, popout_event) = store
+            .attach_session(
+                session_id.clone(),
+                "popout".to_string(),
+                TexSessionRequestRole::Writer,
+            )
+            .unwrap();
+
+        assert!(matches!(result, TexSessionAttachResult::Attached { .. }));
+        let event = popout_event.expect("expected popout attached event");
+        assert_eq!(event.from_window_label, "main");
+        assert_eq!(event.to_window_label, "popout");
+        assert_eq!(
+            store.sessions.get(&session_id).unwrap().owner_window_label.as_deref(),
+            Some("popout")
+        );
+
+        fs::remove_dir_all(temp_root).unwrap();
+    }
+
+    #[test]
+    fn releasing_target_session_clears_active_speech_target() {
+        let temp_root = std::env::temp_dir()
+            .join(format!("tex-session-test-{}", generate_session_id("speech-target")));
+        let mut store = TexSessionStore::new(temp_root.clone()).unwrap();
+        let session_id = "session-speech".to_string();
+        store.sessions.insert(
+            session_id.clone(),
+            TexSessionRecord {
+                snapshot: snapshot_from_document(
+                    session_id.clone(),
+                    0,
+                    false,
+                    sample_document("/tmp/speech.docx", "speech.docx"),
+                ),
+                owner_window_label: Some("main".to_string()),
+                attached_windows: HashSet::from(["main".to_string()]),
+                updated_at_ms: now_ms(),
+                persistence_path: store.session_path(&session_id),
+                pending_popout_target: None,
+            },
+        );
+        store
+            .set_active_speech_target(Some(session_id.clone()))
+            .unwrap();
+
+        store
+            .release_session(session_id, "main".to_string(), false)
+            .unwrap();
+
+        assert_eq!(store.active_speech_target_state().target_session_id, None);
+        fs::remove_dir_all(temp_root).unwrap();
     }
 }

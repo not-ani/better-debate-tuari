@@ -1,0 +1,13 @@
+[package]
+name = "docx"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "docx"
+crate-type = ["rlib"]
+
+[dependencies]
+docx-rs = "0.4"
+roxmltree = "0.20"
+zip = { version = "2.2", default-features = true }
