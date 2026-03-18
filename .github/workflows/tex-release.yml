@@ -32,7 +32,7 @@ jobs:
       TEX_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           lfs: true
 
@@ -46,6 +46,11 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
