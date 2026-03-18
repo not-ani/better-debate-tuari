@@ -14,6 +14,7 @@
     "core:window:allow-show",
     "core:window:allow-set-title",
     "dialog:default",
+    "updater:default",
     {
       "identifier": "opener:allow-open-path",
       "allow": [
