@@ -1,0 +1,294 @@
+.settings-screen {
+  min-height: 100vh;
+  padding: 2.5rem 3rem 3rem;
+  display: grid;
+  align-content: start;
+  gap: 1.75rem;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-color) 16%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-frame) 76%, var(--surface-chrome)), var(--background));
+}
+
+.settings-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.5rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.settings-hero-copy {
+  max-width: 38rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.settings-kicker,
+.settings-card-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent-color) 72%, var(--foreground));
+}
+
+.settings-hero-copy h1,
+.settings-card-header h2 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.settings-hero-copy h1 {
+  font-size: clamp(2.4rem, 3vw, 3.6rem);
+  line-height: 0.94;
+}
+
+.settings-hero-copy p:last-child,
+.settings-card-copy,
+.settings-option-list span,
+.settings-release-notes p {
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.settings-hero-actions,
+.settings-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.settings-primary-button,
+.settings-secondary-button,
+.settings-ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.45rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.settings-primary-button {
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-primary-button:hover:not(:disabled),
+.settings-secondary-button:hover:not(:disabled),
+.settings-ghost-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.settings-secondary-button {
+  background: color-mix(in srgb, var(--card) 76%, var(--surface-frame));
+  border-color: var(--border);
+}
+
+.settings-ghost-button {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+.settings-primary-button:disabled,
+.settings-secondary-button:disabled,
+.settings-ghost-button:disabled {
+  opacity: 0.45;
+  transform: none;
+  cursor: not-allowed;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.95fr);
+  gap: 1rem;
+}
+
+.settings-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), color-mix(in srgb, var(--surface-frame) 94%, var(--card))),
+    var(--card);
+  box-shadow: var(--shadow-page);
+}
+
+.settings-card-feature {
+  grid-row: span 2;
+}
+
+.settings-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+}
+
+.settings-card-header h2 {
+  font-size: 1.65rem;
+}
+
+.settings-status-pill,
+.settings-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.32rem 0.72rem;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.settings-status-pill {
+  background: color-mix(in srgb, var(--muted) 86%, transparent);
+  color: var(--muted-foreground);
+}
+
+.settings-status-pill.is-up-to-date {
+  background: color-mix(in srgb, #1d7f5f 18%, var(--card));
+  color: #1d7f5f;
+}
+
+.settings-status-pill.is-update-available,
+.settings-status-pill.is-ready-to-install {
+  background: color-mix(in srgb, #b46b00 18%, var(--card));
+  color: #9a5d00;
+}
+
+.settings-status-pill.is-checking,
+.settings-status-pill.is-downloading,
+.settings-status-pill.is-installing {
+  background: color-mix(in srgb, var(--accent-color) 16%, var(--card));
+  color: var(--accent-color);
+}
+
+.settings-status-pill.is-error {
+  background: color-mix(in srgb, var(--destructive-color) 18%, var(--card));
+  color: var(--destructive-color);
+}
+
+.settings-inline-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.settings-inline-facts span {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-frame) 60%, var(--card));
+  font-size: 0.77rem;
+  color: var(--muted-foreground);
+}
+
+.settings-progress-shell {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.settings-progress-track {
+  position: relative;
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-frame) 72%, var(--card));
+}
+
+.settings-progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-color) 84%, white), var(--accent-color)),
+    var(--accent-color);
+}
+
+.settings-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+
+.settings-release-notes {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-frame) 70%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.settings-option-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.settings-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-frame) 65%, var(--card));
+  text-align: left;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.settings-toggle-row:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-color) 35%, var(--border));
+}
+
+.settings-toggle-row strong {
+  display: block;
+  margin-bottom: 0.32rem;
+  font-size: 0.92rem;
+}
+
+.settings-chip {
+  background: color-mix(in srgb, var(--accent-color) 14%, var(--card));
+  color: color-mix(in srgb, var(--accent-color) 80%, var(--foreground));
+}
+
+@media (max-width: 960px) {
+  .settings-screen {
+    padding: 1.5rem 1.2rem 2rem;
+  }
+
+  .settings-hero,
+  .settings-card-header,
+  .settings-toggle-row {
+    flex-direction: column;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card-feature {
+    grid-row: auto;
+  }
+}

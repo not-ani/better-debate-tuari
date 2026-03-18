@@ -14,6 +14,7 @@ type PickerScreenProps = {
   busy: boolean;
   recentFiles: RecentFile[];
   recoverableSessions: TexRecoverableSession[];
+  settingsLabel: string;
   theme: ThemeMode;
   onDiscardRecovery: (sessionId: string) => void;
   onNewSpeech: () => void;
@@ -21,6 +22,7 @@ type PickerScreenProps = {
   onOpenSearch: () => void;
   onOpenRecent: (path: string) => void;
   onRecoverSession: (sessionId: string) => void;
+  onOpenSettings: () => void;
   onToggleTheme: () => void;
 };
 
@@ -39,6 +41,9 @@ export default function PickerScreen(props: PickerScreenProps) {
           </button>
           <button class="picker-open-link" onClick={props.onOpenSearch} type="button">
             Search
+          </button>
+          <button class="picker-open-link" onClick={props.onOpenSettings} type="button">
+            {props.settingsLabel}
           </button>
           <button
             class="picker-open-link"

@@ -12,6 +12,7 @@ type EditorScreenProps = {
   busy: boolean;
   canPopOut: boolean;
   outline: OutlineNode[];
+  settingsLabel: string;
   sidebarCollapsed: boolean;
   collapsedNodes: Set<number>;
   scrollTarget: number | null;
@@ -24,6 +25,7 @@ type EditorScreenProps = {
   onNewFile: () => void;
   onNewSpeech: () => void;
   onShowFiles: () => void;
+  onOpenSettings: () => void;
   onOpenSearch: () => void;
   onOpenDialog: () => void;
   onOpenSpeechSend: (forceTargetPick: boolean) => void;
@@ -66,6 +68,9 @@ export default function EditorScreen(props: EditorScreenProps) {
           </button>
           <button class="tab-bar-menu" onClick={props.onOpenSearch} type="button">
             Search
+          </button>
+          <button class="tab-bar-menu" onClick={props.onOpenSettings} type="button">
+            {props.settingsLabel}
           </button>
           <Show when={props.canPopOut}>
             <button

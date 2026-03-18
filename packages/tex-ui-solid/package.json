@@ -12,6 +12,7 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-updater": "^2",
     "@prosemirror-adapter/solid": "^0.4.2",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-history": "^1.4.1",

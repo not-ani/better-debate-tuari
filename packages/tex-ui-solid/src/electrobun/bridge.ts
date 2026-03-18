@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath as openNativePath } from "@tauri-apps/plugin-opener";
+import { check } from "@tauri-apps/plugin-updater";
 import type {
   RecentFile,
   TexRecoverableSession,
@@ -19,6 +21,26 @@ import type { DetachedWindowEntry } from "../lib/windowing";
 
 export const RECENT_FILES_STORAGE_KEY = "tex-recent-files";
 const RECENT_FILES_LIMIT = 18;
+type PendingUpdate = NonNullable<Awaited<ReturnType<typeof check>>>;
+
+let pendingUpdate: PendingUpdate | null = null;
+let updateState: TexUpdateState = {
+  status: "idle",
+  statusLabel: "Idle",
+  headline: "Updater ready",
+  detail: "Check for signed releases when you want to refresh this build.",
+  notes: null,
+  releaseDate: null,
+  availableVersion: null,
+  lastCheckedAtMs: null,
+  downloadedBytes: null,
+  contentLength: null,
+  isChecking: false,
+  isDownloading: false,
+  canInstall: false,
+  installButtonLabel: "Install update",
+  error: null,
+};
 
 const invokeTauri = <T>(command: string, args: Record<string, unknown>) => invoke<T>(command, args);
 const ensureDocxPath = (filePath: string) =>
@@ -247,5 +269,187 @@ export const openPath = async (path: string) => {
     return true;
   } catch {
     return false;
+  }
+};
+
+const normalizeError = (error: unknown) =>
+  error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown updater error.";
+
+const formatReleaseDate = (value: unknown) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsed);
+};
+
+const setUpdateState = (next: TexUpdateState) => {
+  updateState = next;
+  return next;
+};
+
+export const getAppVersion = async () => getVersion();
+
+export const getUpdateState = async () => updateState;
+
+export const checkForUpdates = async () => {
+  const lastCheckedAtMs = Date.now();
+  setUpdateState({
+    ...updateState,
+    status: "checking",
+    statusLabel: "Checking",
+    headline: "Looking for a new build",
+    detail: "Tex is asking the configured release channel for a newer signed version.",
+    lastCheckedAtMs,
+    isChecking: true,
+    isDownloading: false,
+    canInstall: false,
+    installButtonLabel: "Install update",
+    error: null,
+  });
+
+  try {
+    const update = await check();
+    if (!update) {
+      pendingUpdate = null;
+      return setUpdateState({
+        ...updateState,
+        status: "up-to-date",
+        statusLabel: "Current",
+        headline: "This build is current",
+        detail: "No newer signed release is available right now.",
+        notes: null,
+        releaseDate: null,
+        availableVersion: null,
+        downloadedBytes: null,
+        contentLength: null,
+        isChecking: false,
+        canInstall: false,
+        installButtonLabel: "Install update",
+        error: null,
+      });
+    }
+
+    pendingUpdate = update;
+    return setUpdateState({
+      ...updateState,
+      status: "update-available",
+      statusLabel: "Available",
+      headline: `Tex ${update.version} is ready`,
+      detail: "A signed update is available. Review the notes below and install when you are ready.",
+      notes: update.body ?? null,
+      releaseDate: formatReleaseDate(update.date),
+      availableVersion: update.version,
+      downloadedBytes: null,
+      contentLength: null,
+      isChecking: false,
+      canInstall: true,
+      installButtonLabel: "Download and install",
+      error: null,
+    });
+  } catch (error) {
+    pendingUpdate = null;
+    return setUpdateState({
+      ...updateState,
+      status: "error",
+      statusLabel: "Unavailable",
+      headline: "Updater unavailable",
+      detail: normalizeError(error),
+      notes: null,
+      releaseDate: null,
+      availableVersion: null,
+      downloadedBytes: null,
+      contentLength: null,
+      isChecking: false,
+      canInstall: false,
+      installButtonLabel: "Install update",
+      error: normalizeError(error),
+    });
+  }
+};
+
+export const installUpdateNow = async () => {
+  if (!pendingUpdate) {
+    return updateState;
+  }
+
+  setUpdateState({
+    ...updateState,
+    status: "downloading",
+    statusLabel: "Downloading",
+    headline: `Installing Tex ${pendingUpdate.version}`,
+    detail: "The update package is downloading now. Keep this window open until the installer finishes.",
+    isDownloading: true,
+    canInstall: false,
+    installButtonLabel: "Installing...",
+    error: null,
+  });
+
+  try {
+    let downloadedBytes = 0;
+    let contentLength: number | null = null;
+
+    await pendingUpdate.downloadAndInstall((event) => {
+      switch (event.event) {
+        case "Started":
+          contentLength = event.data.contentLength ?? null;
+          setUpdateState({
+            ...updateState,
+            contentLength,
+            downloadedBytes: 0,
+          });
+          break;
+        case "Progress":
+          downloadedBytes += event.data.chunkLength;
+          setUpdateState({
+            ...updateState,
+            downloadedBytes,
+            contentLength,
+          });
+          break;
+        case "Finished":
+          setUpdateState({
+            ...updateState,
+            downloadedBytes: contentLength,
+            contentLength,
+          });
+          break;
+      }
+    });
+
+    pendingUpdate = null;
+    return setUpdateState({
+      ...updateState,
+      status: "installed",
+      statusLabel: "Installed",
+      headline: "Update installed",
+      detail:
+        "The update has been installed. Restart Tex to finish applying it. On Windows, the app may close automatically during this step.",
+      isDownloading: false,
+      canInstall: false,
+      installButtonLabel: "Installed",
+      error: null,
+    });
+  } catch (error) {
+    return setUpdateState({
+      ...updateState,
+      status: "error",
+      statusLabel: "Unavailable",
+      headline: "Install failed",
+      detail: normalizeError(error),
+      isDownloading: false,
+      canInstall: true,
+      installButtonLabel: "Retry install",
+      error: normalizeError(error),
+    });
   }
 };

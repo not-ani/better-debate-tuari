@@ -5,14 +5,19 @@ import { WebviewWindow, getCurrentWebviewWindow } from "@tauri-apps/api/webviewW
 import CommandPalette, { type CommandPaletteItem } from "./components/CommandPalette";
 import EditorScreen from "./components/EditorScreen";
 import PickerScreen from "./components/PickerScreen";
+import SettingsScreen from "./components/SettingsScreen";
 import SpeechSendModal from "./components/SpeechSendModal";
 import {
   RECENT_FILES_STORAGE_KEY,
   attachTexSession,
+  checkForUpdates,
   createTexSpeechSessionDialog,
   createTexSessionDialog,
-  getActiveSpeechTarget,
   discardTexRecoverableSession,
+  getActiveSpeechTarget,
+  getAppVersion,
+  getUpdateState,
+  installUpdateNow,
   listRecentFiles,
   listTexDetachedWindows,
   listTexOpenSessions,
@@ -30,12 +35,15 @@ import {
 } from "./electrobun/bridge";
 import { getInitialInvisibilityMode, persistInvisibilityMode } from "./lib/invisibility";
 import { buildOutlineTree } from "./lib/outline";
+import { getInitialSettings, persistSettings } from "./lib/settings";
 import { buildSpeechSendSource, placementForTarget } from "./lib/speechRouting";
 import { applyTheme, getInitialTheme, type ThemeMode } from "./lib/theme";
 import type {
   RecentFile,
   TexRecoverableSession,
   TexSendInsertMode,
+  TexUpdateState,
+  TexUserSettings,
   TexSessionRouteTarget,
   TexSessionAttachResult,
   TexSessionOpenResult,
@@ -67,6 +75,23 @@ const SESSION_UPDATED_EVENT = "tex://session-updated";
 const SPEECH_TARGET_CHANGED_EVENT = "tex://speech-target-changed";
 const SESSION_UPDATE_DEBOUNCE_MS = 250;
 const POPOUT_ATTACH_TIMEOUT_MS = 5000;
+const INITIAL_UPDATE_STATE: TexUpdateState = {
+  status: "idle",
+  statusLabel: "Idle",
+  headline: "Updater ready",
+  detail: "Check for signed releases when you want to refresh this build.",
+  notes: null,
+  releaseDate: null,
+  availableVersion: null,
+  lastCheckedAtMs: null,
+  downloadedBytes: null,
+  contentLength: null,
+  isChecking: false,
+  isDownloading: false,
+  canInstall: false,
+  installButtonLabel: "Install update",
+  error: null,
+};
 
 const normalizeSearch = (value: string) => value.trim().toLowerCase();
 
@@ -101,7 +126,7 @@ export default function App() {
   const [recoverableSessions, setRecoverableSessions] = createSignal<TexRecoverableSession[]>([]);
   const [tabs, setTabs] = createSignal<OpenTab[]>([]);
   const [activeTabId, setActiveTabId] = createSignal<string | null>(null);
-  const [screen, setScreen] = createSignal<"picker" | "editor">("picker");
+  const [screen, setScreen] = createSignal<"picker" | "editor" | "settings">("picker");
   const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [collapsedNodes, setCollapsedNodes] = createSignal<Set<number>>(new Set());
@@ -119,6 +144,9 @@ export default function App() {
   const [selectedSpeechTargetSessionId, setSelectedSpeechTargetSessionId] = createSignal<string | null>(null);
   const [selectedSpeechTargetBlockIndex, setSelectedSpeechTargetBlockIndex] = createSignal<number | null>(null);
   const [speechRootSelected, setSpeechRootSelected] = createSignal(false);
+  const [userSettings, setUserSettings] = createSignal<TexUserSettings>(getInitialSettings());
+  const [appVersion, setAppVersion] = createSignal("...");
+  const [updateState, setUpdateState] = createSignal<TexUpdateState>(INITIAL_UPDATE_STATE);
 
   const launchContext = getLaunchContext();
   const pendingFlushTimers = new Map<string, number>();
@@ -135,6 +163,16 @@ export default function App() {
   let allowWindowClose = false;
 
   const activeTab = createMemo(() => tabs().find((tab) => tab.id === activeTabId()) ?? null);
+  const settingsLabel = createMemo(() => {
+    const status = updateState().status;
+    if (status === "update-available" || status === "downloading") {
+      return "Settings • Update";
+    }
+    if (status === "installed") {
+      return "Settings • Restart";
+    }
+    return "Settings";
+  });
 
   const outline = createMemo(() => {
     const tab = activeTab();
@@ -212,6 +250,18 @@ export default function App() {
             },
           },
         }),
+        await PredefinedMenuItem.new({ item: "Separator" }),
+        {
+          id: "open-settings",
+          text: "Settings",
+          accelerator: "CmdOrCtrl+,",
+          action: () => handleOpenSettings(),
+        },
+        {
+          id: "check-for-updates",
+          text: "Check for Updates",
+          action: () => void handleCheckForUpdates({ openSettingsOnCompletion: true }),
+        },
         await PredefinedMenuItem.new({ item: "Separator" }),
         await PredefinedMenuItem.new({ item: "Quit" }),
       ],
@@ -435,9 +485,21 @@ export default function App() {
     setCommandPaletteQuery("");
   };
 
+  const showPrimaryScreen = () => {
+    setScreen(activeTab() ? "editor" : "picker");
+  };
+
   const openPalette = () => {
     setCommandPaletteQuery("");
     setCommandPaletteOpen(true);
+  };
+
+  const handleOpenSettings = () => {
+    setScreen("settings");
+  };
+
+  const handleCloseSettings = () => {
+    showPrimaryScreen();
   };
 
   const finalizeLocalTabClose = (tabId: string) => {
@@ -449,7 +511,9 @@ export default function App() {
 
     if (remaining.length === 0) {
       setActiveTabId(null);
-      setScreen("picker");
+      if (screen() !== "settings") {
+        setScreen("picker");
+      }
       void loadRecent();
       return;
     }
@@ -828,6 +892,29 @@ export default function App() {
     setTheme((current) => (current === "light" ? "dark" : "light"));
   };
 
+  const toggleAutoCheckForUpdates = () => {
+    setUserSettings((current) => ({
+      ...current,
+      autoCheckForUpdates: !current.autoCheckForUpdates,
+    }));
+  };
+
+  const handleCheckForUpdates = async (options?: {
+    openSettingsOnCompletion?: boolean;
+  }) => {
+    const next = await checkForUpdates();
+    setUpdateState(next);
+
+    if (options?.openSettingsOnCompletion) {
+      setScreen("settings");
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    const next = await installUpdateNow();
+    setUpdateState(next);
+  };
+
   const toggleInvisibilityMode = () => {
     setInvisibilityMode((current) => !current);
   };
@@ -896,6 +983,23 @@ export default function App() {
       title: "Open file...",
       subtitle: "Browse for a document on disk",
       run: () => void handleOpenDialog(),
+    });
+
+    items.push({
+      id: "command:settings",
+      badge: "Command",
+      title: "Open settings",
+      subtitle: "Manage appearance, release checks, and installs",
+      meta: updateState().availableVersion ? `Update ${updateState().availableVersion}` : undefined,
+      run: () => handleOpenSettings(),
+    });
+
+    items.push({
+      id: "command:check-updates",
+      badge: "Command",
+      title: "Check for updates",
+      subtitle: "Ask the release channel for a newer signed Tex build",
+      run: () => void handleCheckForUpdates({ openSettingsOnCompletion: true }),
     });
 
     if (activeTab()) {
@@ -983,6 +1087,14 @@ export default function App() {
     void syncDetachedWindows();
     void syncRecoverableSessions();
     void setupNativeMenu();
+    void getAppVersion().then(setAppVersion).catch(() => undefined);
+    void getUpdateState().then(setUpdateState).catch(() => undefined);
+
+    if (!import.meta.env.DEV && userSettings().autoCheckForUpdates) {
+      window.setTimeout(() => {
+        void handleCheckForUpdates();
+      }, 1200);
+    }
 
     const onStorage = (event: StorageEvent) => {
       if (!event.key || event.key === RECENT_FILES_STORAGE_KEY) {
@@ -994,6 +1106,12 @@ export default function App() {
       if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "p") {
         event.preventDefault();
         openPalette();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault();
+        handleOpenSettings();
         return;
       }
 
@@ -1170,6 +1288,10 @@ export default function App() {
   });
 
   createEffect(() => {
+    persistSettings(userSettings());
+  });
+
+  createEffect(() => {
     activeTabId();
     setCollapsedNodes(new Set<number>());
   });
@@ -1181,56 +1303,78 @@ export default function App() {
   return (
     <ProsemirrorAdapterProvider>
       <Show
-        when={screen() === "editor" && activeTab()}
+        when={screen() === "settings"}
         fallback={
-          <PickerScreen
-            busy={busy()}
-            recentFiles={recentFiles()}
-            recoverableSessions={recoverableSessions()}
-            theme={theme()}
-            onDiscardRecovery={(sessionId) => void handleDiscardRecovery(sessionId)}
-            onNewSpeech={() => void handleNewSpeechDialog()}
-            onOpenDialog={() => void handleOpenDialog()}
-            onOpenRecent={(path) => void handleOpenRecent(path)}
-            onOpenSearch={openPalette}
-            onRecoverSession={(sessionId) => void handleRecoverSession(sessionId)}
-            onToggleTheme={toggleTheme}
-          />
+          <Show
+            when={screen() === "editor" && activeTab()}
+            fallback={
+              <PickerScreen
+                busy={busy()}
+                recentFiles={recentFiles()}
+                recoverableSessions={recoverableSessions()}
+                settingsLabel={settingsLabel()}
+                theme={theme()}
+                onDiscardRecovery={(sessionId) => void handleDiscardRecovery(sessionId)}
+                onNewSpeech={() => void handleNewSpeechDialog()}
+                onOpenDialog={() => void handleOpenDialog()}
+                onOpenRecent={(path) => void handleOpenRecent(path)}
+                onOpenSearch={openPalette}
+                onOpenSettings={handleOpenSettings}
+                onRecoverSession={(sessionId) => void handleRecoverSession(sessionId)}
+                onToggleTheme={toggleTheme}
+              />
+            }
+          >
+            {(tab) => (
+              <EditorScreen
+                activeTabId={activeTabId()}
+                busy={busy()}
+                canPopOut={Boolean(activeTab()) && !isDetachedWindow()}
+                collapsedNodes={collapsedNodes()}
+                invisibilityMode={invisibilityMode()}
+                onCloseTab={(tabId) => void releaseAndCloseTab(tabId)}
+                onDocumentChange={updateActiveDocument}
+                onActiveBlockIndexChange={updateActiveBlockIndex}
+                onNewFile={() => void handleNewFileDialog()}
+                onNewSpeech={() => void handleNewSpeechDialog()}
+                onOpenDialog={() => void handleOpenDialog()}
+                onOpenSettings={handleOpenSettings}
+                onOpenSpeechSend={(forceTargetPick) => void openSpeechSend(forceTargetPick)}
+                onOpenSearch={openPalette}
+                onOutlineClick={handleOutlineClick}
+                onPopOut={() => void handlePopOutActive()}
+                onSave={() => void handleSaveActive()}
+                onShowFiles={() => setScreen("picker")}
+                onSwitchTab={handleSwitchTab}
+                onToggleInvisibilityMode={toggleInvisibilityMode}
+                onToggleOutlineNode={toggleCollapse}
+                onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+                onToggleStickyHighlightMode={toggleStickyHighlightMode}
+                outline={outline()}
+                scrollTarget={scrollTarget()}
+                settingsLabel={settingsLabel()}
+                sidebarCollapsed={sidebarCollapsed()}
+                speechSendOpen={speechSendOpen()}
+                stickyHighlightMode={tab().stickyHighlightMode}
+                tab={tab()}
+                tabs={tabs()}
+              />
+            )}
+          </Show>
         }
       >
-        {(tab) => (
-          <EditorScreen
-            activeTabId={activeTabId()}
-            busy={busy()}
-            canPopOut={Boolean(activeTab()) && !isDetachedWindow()}
-            collapsedNodes={collapsedNodes()}
-            invisibilityMode={invisibilityMode()}
-            onCloseTab={(tabId) => void releaseAndCloseTab(tabId)}
-            onDocumentChange={updateActiveDocument}
-            onActiveBlockIndexChange={updateActiveBlockIndex}
-            onNewFile={() => void handleNewFileDialog()}
-            onNewSpeech={() => void handleNewSpeechDialog()}
-            onOpenDialog={() => void handleOpenDialog()}
-            onOpenSpeechSend={(forceTargetPick) => void openSpeechSend(forceTargetPick)}
-            onOpenSearch={openPalette}
-            onOutlineClick={handleOutlineClick}
-            onPopOut={() => void handlePopOutActive()}
-            onSave={() => void handleSaveActive()}
-            onShowFiles={() => setScreen("picker")}
-            onSwitchTab={handleSwitchTab}
-            onToggleInvisibilityMode={toggleInvisibilityMode}
-            onToggleOutlineNode={toggleCollapse}
-            onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
-            onToggleStickyHighlightMode={toggleStickyHighlightMode}
-            outline={outline()}
-            scrollTarget={scrollTarget()}
-            sidebarCollapsed={sidebarCollapsed()}
-            speechSendOpen={speechSendOpen()}
-            stickyHighlightMode={tab().stickyHighlightMode}
-            tab={tab()}
-            tabs={tabs()}
-          />
-        )}
+        <SettingsScreen
+          appVersion={appVersion()}
+          busy={busy()}
+          onBack={handleCloseSettings}
+          onCheckForUpdates={() => void handleCheckForUpdates()}
+          onInstallUpdate={() => void handleInstallUpdate()}
+          onToggleAutoCheckForUpdates={toggleAutoCheckForUpdates}
+          onToggleTheme={toggleTheme}
+          settings={userSettings()}
+          theme={theme()}
+          updateState={updateState()}
+        />
       </Show>
 
       <CommandPalette

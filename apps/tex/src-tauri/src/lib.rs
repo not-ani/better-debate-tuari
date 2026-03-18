@@ -5,8 +5,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             #[cfg(desktop)]
-            app.handle()
-                .plugin(tauri_plugin_updater::Builder::new().build())?;
+            if option_env!("TAURI_UPDATER_PUBLIC_KEY").is_some() {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+            }
 
             better_debate_tauri_host::configure_backend(app.handle(), env!("CARGO_MANIFEST_DIR"))?;
             Ok(())
