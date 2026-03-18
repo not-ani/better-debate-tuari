@@ -1,10 +1,10 @@
 [package]
-name = "better-debate-core"
+name = "search-core"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "better_debate_core"
+name = "search_core"
 crate-type = ["rlib"]
 
 [dependencies]
@@ -12,7 +12,7 @@ arrow-array = "57.2"
 arrow-schema = "57.2"
 blake3 = "1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
-docx-rs = "0.4"
+docx = { path = "../docx" }
 futures = "0.3"
 lancedb = "0.26.2"
 ort = "=2.0.0-rc.11"

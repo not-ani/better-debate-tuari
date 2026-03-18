@@ -2,13 +2,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
-use crate::docx_capture::{
-    create_blank_docx, rewrite_docx_with_parts, xml_escape_attr, xml_escape_text,
+use docx::{
+    create_blank_docx, has_tag, path_display, read_zip_file, rewrite_docx_with_parts,
+    xml_escape_attr, xml_escape_text,
 };
-use crate::docx_parse::{has_tag, read_zip_file};
-use crate::types::{TexBlock, TexDocumentPayload, TexTextRun};
-use crate::util::path_display;
-use crate::CommandResult;
+
+use crate::{CommandResult, TexBlock, TexDocumentPayload, TexTextRun};
 
 fn canonical_paragraph_style_id(block: &TexBlock) -> String {
     if block.kind == "heading" {
@@ -216,8 +215,10 @@ pub fn save_tex_document(
 
 #[cfg(test)]
 mod tests {
-    use super::canonical_paragraph_style_id;
-    use crate::types::TexBlock;
+    use std::path::Path;
+
+    use super::{canonical_paragraph_style_id, save_tex_document};
+    use crate::{TexBlock, TexDocumentPayload, TexTextRun};
 
     fn sample_block(kind: &str, level: Option<i64>, style_id: Option<&str>) -> TexBlock {
         TexBlock {
@@ -250,5 +251,64 @@ mod tests {
             canonical_paragraph_style_id(&sample_block("paragraph", None, Some("Cite"))),
             "Cite"
         );
+    }
+
+    #[test]
+    fn save_round_trips_document_payload() {
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("tex-write-{timestamp}.docx"));
+        let blocks = vec![
+            TexBlock {
+                id: "p-1".to_string(),
+                kind: "heading".to_string(),
+                text: "Overview".to_string(),
+                runs: vec![TexTextRun {
+                    text: "Overview".to_string(),
+                    bold: false,
+                    italic: false,
+                    underline: false,
+                    small_caps: false,
+                    highlight_color: None,
+                    style_id: None,
+                    style_name: None,
+                    is_f8_cite: false,
+                }],
+                level: Some(2),
+                style_id: Some("Heading2".to_string()),
+                style_name: Some("Heading 2".to_string()),
+                is_f8_cite: false,
+            },
+            TexBlock {
+                id: "p-2".to_string(),
+                kind: "paragraph".to_string(),
+                text: "Body text".to_string(),
+                runs: vec![TexTextRun {
+                    text: "Body text".to_string(),
+                    bold: true,
+                    italic: false,
+                    underline: false,
+                    small_caps: false,
+                    highlight_color: Some("yellow".to_string()),
+                    style_id: None,
+                    style_name: None,
+                    is_f8_cite: false,
+                }],
+                level: None,
+                style_id: None,
+                style_name: None,
+                is_f8_cite: false,
+            },
+        ];
+
+        let saved: TexDocumentPayload = save_tex_document(Path::new(&path), &blocks).unwrap();
+        assert_eq!(saved.paragraph_count, 2);
+        assert_eq!(saved.blocks[0].kind, "heading");
+        assert_eq!(saved.blocks[0].level, Some(2));
+        assert_eq!(saved.blocks[1].runs[0].highlight_color.as_deref(), Some("yellow"));
+
+        let _ = std::fs::remove_file(path);
     }
 }

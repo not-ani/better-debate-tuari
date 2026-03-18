@@ -1,0 +1,14 @@
+[package]
+name = "tex-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "tex_core"
+crate-type = ["rlib"]
+
+[dependencies]
+docx = { path = "../docx" }
+roxmltree = "0.20"
+serde = { version = "1", features = ["derive"] }
+zip = { version = "2.2", default-features = true }

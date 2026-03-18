@@ -1,0 +1,10 @@
+[package]
+name = "search-tauri-host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+search-core = { path = "../search-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }

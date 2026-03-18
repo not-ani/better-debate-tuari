@@ -2267,4 +2267,28 @@ mod tests {
         assert_eq!(plan.planner_mode, PlannerMode::NameLike);
         assert!(plan.allow_chargram_rescue);
     }
+
+    #[test]
+    fn exact_id_like_queries_disable_prefix_rescue() {
+        let plan = build_plan("CARD-2025-001", "card 2025 001", SearchMode::Keyword);
+        assert_eq!(plan.planner_mode, PlannerMode::ExactIdLike);
+        assert!(!plan.allow_prefix_rescue);
+    }
+
+    #[test]
+    fn short_keyword_queries_use_keyword_mode() {
+        let plan = build_plan("cap", "cap", SearchMode::Keyword);
+        assert_eq!(plan.planner_mode, PlannerMode::ShortKeyword);
+        assert!(plan.allow_prefix_rescue);
+    }
+
+    #[test]
+    fn long_mixed_queries_prefer_mixed_mode() {
+        let plan = build_plan(
+            "federalism kritik impact turn answers framework",
+            "federalism kritik impact turn answers framework",
+            SearchMode::Mixed,
+        );
+        assert_eq!(plan.planner_mode, PlannerMode::LongMixed);
+    }
 }

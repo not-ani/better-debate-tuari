@@ -562,40 +562,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
-name = "better-debate-core"
-version = "0.1.0"
-dependencies = [
- "arrow-array",
- "arrow-schema",
- "blake3",
- "chrono",
- "docx-rs",
- "futures",
- "lancedb",
- "ort",
- "rayon",
- "roxmltree",
- "rusqlite",
- "serde",
- "serde_json",
- "tantivy",
- "tokenizers",
- "tokio",
- "walkdir",
- "zip 2.4.2",
-]
-
-[[package]]
-name = "better-debate-tauri-host"
-version = "0.1.0"
-dependencies = [
- "better-debate-core",
- "serde",
- "serde_json",
- "tauri",
-]
-
-[[package]]
 name = "bigdecimal"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -717,7 +683,7 @@ dependencies = [
 name = "blockvault"
 version = "0.1.0"
 dependencies = [
- "better-debate-tauri-host",
+ "search-tauri-host",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -2212,6 +2178,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "docx"
+version = "0.1.0"
+dependencies = [
+ "docx-rs",
+ "roxmltree",
+ "zip 2.4.2",
 ]
 
 [[package]]
@@ -7059,6 +7034,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "search-core"
+version = "0.1.0"
+dependencies = [
+ "arrow-array",
+ "arrow-schema",
+ "blake3",
+ "chrono",
+ "docx",
+ "futures",
+ "lancedb",
+ "ort",
+ "rayon",
+ "roxmltree",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tantivy",
+ "tokenizers",
+ "tokio",
+ "walkdir",
+ "zip 2.4.2",
+]
+
+[[package]]
+name = "search-tauri-host"
+version = "0.1.0"
+dependencies = [
+ "search-core",
+ "serde",
+ "serde_json",
+ "tauri",
+]
+
+[[package]]
 name = "security-framework"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8294,13 +8303,33 @@ dependencies = [
 name = "tex"
 version = "0.0.1"
 dependencies = [
- "better-debate-tauri-host",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "tauri-plugin-updater",
+ "tex-tauri-host",
+]
+
+[[package]]
+name = "tex-core"
+version = "0.1.0"
+dependencies = [
+ "docx",
+ "roxmltree",
+ "serde",
+ "zip 2.4.2",
+]
+
+[[package]]
+name = "tex-tauri-host"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tex-core",
 ]
 
 [[package]]

@@ -15,14 +15,14 @@ use crate::db::{
     open_database, restore_database_after_bulk_index, root_id,
 };
 use crate::docx_capture::{
-    append_capture_to_docx, ensure_valid_capture_docx, extract_styled_section,
-    paragraph_xml_heading, rewrite_docx_with_parts,
+    append_capture_to_docx, ensure_valid_capture_docx, extract_styled_section, paragraph_xml_heading,
 };
 use crate::docx_parse::{build_heading_ranges, has_tag, parse_docx_paragraphs, read_docx_part};
 use crate::indexer::{
     apply_lexical_index_file_changes_for_root_with_options,
     rebuild_lexical_index_for_root_with_options,
 };
+use docx::rewrite_docx_with_parts;
 use crate::lexical;
 use crate::preview::{extract_heading_preview_html, extract_preview_content};
 use crate::query_engine;

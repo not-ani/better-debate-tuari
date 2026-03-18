@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-better-debate-tauri-host = { path = "../../../crates/better-debate-tauri-host" }
+tex-tauri-host = { path = "../../../crates/tex-tauri-host" }
 serde_json = "1"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
