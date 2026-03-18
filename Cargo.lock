@@ -8292,9 +8292,10 @@ dependencies = [
 
 [[package]]
 name = "tex"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "better-debate-tauri-host",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
