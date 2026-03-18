@@ -1,0 +1,181 @@
+/* ─── Ribbon: two-layer (tab row + panel) ─── */
+.ribbon-shell {
+  background: var(--surface-ribbon);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ─── Tab row — always visible, thin ─── */
+.ribbon-tab-row {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0.4rem;
+  height: 1.375rem;
+}
+
+.ribbon-tab {
+  padding: 0.15rem 0.5rem 0.12rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 80ms ease, border-color 80ms ease;
+}
+
+.ribbon-tab:hover {
+  color: var(--foreground);
+}
+
+.ribbon-tab.active {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+/* ─── Panel — the F-key buttons grid, toggled by Home ─── */
+.ribbon-panel {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* 4-column grid of action buttons */
+.ribbon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 0.3rem;
+  flex: 0 0 auto;
+}
+
+/* Vertical separator next to eye icon */
+.ribbon-panel-separator {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+/* Individual ribbon button — compact pill */
+.ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 1.5rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 80ms ease, border-color 80ms ease, box-shadow 80ms ease;
+  flex: 0 0 auto;
+}
+
+.ribbon-btn:hover:not(:disabled) {
+  background: var(--muted);
+  border-color: var(--gray-400);
+}
+
+.ribbon-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ribbon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ribbon-btn-key {
+  font-weight: 600;
+  font-size: 0.62rem;
+  letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+}
+
+.ribbon-btn.active .ribbon-btn-key {
+  color: var(--accent-color);
+}
+
+.ribbon-btn-sep {
+  color: var(--muted-foreground);
+  font-size: 0.58rem;
+  margin: 0 0.05rem;
+}
+
+.ribbon-btn-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Compact icon toggles for view tools */
+.ribbon-compact-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+  flex: 0 0 auto;
+}
+
+.ribbon-compact-toggle:hover:not(:disabled) {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.ribbon-compact-toggle.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ribbon-compact-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.5rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+  flex: 0 0 auto;
+}
+
+.ribbon-compact-action:hover:not(:disabled) {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.ribbon-compact-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 960px) {
+  .ribbon-grid {
+    grid-template-columns: repeat(2, auto);
+  }
+}

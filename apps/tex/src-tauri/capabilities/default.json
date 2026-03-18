@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for the Tex window.",
+  "windows": [
+    "main",
+    "doc-*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-create",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
+    "core:window:allow-set-title",
+    "dialog:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    }
+  ]
+}

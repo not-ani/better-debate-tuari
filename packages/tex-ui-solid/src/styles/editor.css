@@ -1,0 +1,251 @@
+.editor-page {
+  --editor-margin: 2.5rem;
+  --editor-zoom: 1;
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 12%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--editor-canvas) 92%, white 8%) 0%,
+      var(--editor-canvas) 100%
+    );
+}
+
+.editor-paper-shadow {
+  display: none;
+}
+
+.editor-surface {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  padding: 1.5rem var(--editor-margin) 3rem;
+  background: transparent;
+  zoom: var(--editor-zoom);
+}
+
+.editor-surface .ProseMirror {
+  max-width: var(--editor-content-width, 100%);
+  margin: 0 auto;
+  min-height: calc(100vh - 5rem);
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: 11.5pt;
+  line-height: 1.5;
+  color: var(--editor-text);
+}
+
+.editor-margin-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.editor-margin-handle:hover,
+.editor-margin-handle.dragging {
+  background: var(--accent-color);
+  opacity: 0.3;
+}
+
+.editor-margin-handle--left {
+  left: calc(var(--editor-margin) - 3px);
+}
+
+.editor-margin-handle--right {
+  right: calc(var(--editor-margin) - 3px);
+}
+
+.editor-surface .ProseMirror p,
+.editor-surface .ProseMirror h1,
+.editor-surface .ProseMirror h2,
+.editor-surface .ProseMirror h3,
+.editor-surface .ProseMirror h4 {
+  margin: 0 0 0.55rem;
+}
+
+.editor-surface .ProseMirror h1,
+.editor-surface .ProseMirror h2,
+.editor-surface .ProseMirror h3,
+.editor-surface .ProseMirror h4 {
+  display: block;
+  min-height: 1em;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--editor-heading);
+}
+
+.editor-surface .ProseMirror h1 {
+  margin: 0.35rem 0 1.2rem;
+  padding: 0.75rem 1.2rem;
+  border: 5px solid var(--editor-box-border);
+  text-align: center;
+  font-size: clamp(1.8rem, 3.2vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--editor-heading);
+  background: color-mix(in srgb, var(--editor-canvas) 14%, transparent);
+}
+
+.editor-surface .ProseMirror h2 {
+  margin: 0.1rem 0 0.8rem;
+  padding: 0 0.2rem 0.18rem;
+  border-bottom: 4px double var(--editor-box-border);
+  text-align: center;
+  font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.035em;
+  color: var(--editor-heading);
+}
+
+.editor-surface .ProseMirror h3 {
+  margin: 0.2rem 0 0.9rem;
+  padding: 0 0.18rem 0.16rem;
+  border-bottom: 2px solid var(--editor-box-border);
+  text-align: center;
+  font-size: clamp(1.05rem, 1.5vw, 1.4rem);
+  letter-spacing: -0.02em;
+  color: var(--editor-heading);
+}
+
+.editor-surface .ProseMirror h4 {
+  margin-top: 1rem;
+  padding-left: 0.7rem;
+  border-left: 4px solid color-mix(in srgb, var(--editor-box-border) 90%, transparent);
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--editor-heading);
+}
+
+.editor-surface .ProseMirror p {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--editor-text);
+}
+
+.editor-surface .ProseMirror p[data-style-id="Cite"],
+.editor-surface .ProseMirror p[data-f8-cite="true"] {
+  margin-top: 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.52;
+  color: var(--editor-text);
+}
+
+.editor-surface .ProseMirror [data-tex-cite="true"] {
+  font-weight: 800;
+  color: var(--editor-inline-cite);
+}
+
+.editor-surface .ProseMirror h1[data-style-id="Pocket"],
+.editor-surface .ProseMirror h1[data-style-id="Heading1"],
+.editor-surface .ProseMirror h2[data-style-id="Hat"],
+.editor-surface .ProseMirror h2[data-style-id="Heading2"],
+.editor-surface .ProseMirror h3[data-style-id="Block"],
+.editor-surface .ProseMirror h3[data-style-id="Heading3"],
+.editor-surface .ProseMirror h4[data-style-id="Tag"],
+.editor-surface .ProseMirror h4[data-style-id="Heading4"] {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.editor-surface .ProseMirror mark {
+  background: var(--editor-highlight-bg);
+  padding: 0.08em 0.06em;
+  border-radius: 2px;
+  color: var(--editor-highlight-fg);
+}
+
+.editor-surface .ProseMirror u {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.editor-page.invisibility-mode .editor-surface .ProseMirror p:not([data-style-id="Cite"]):not([data-f8-cite="true"]) {
+  margin: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+
+.editor-page.invisibility-mode
+  .editor-surface
+  .ProseMirror
+  p:not([data-style-id="Cite"]):not([data-f8-cite="true"])
+  [data-tex-cite="true"] {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--editor-inline-cite);
+}
+
+.editor-page.invisibility-mode
+  .editor-surface
+  .ProseMirror
+  p:not([data-style-id="Cite"]):not([data-f8-cite="true"])
+  strong,
+.editor-page.invisibility-mode
+  .editor-surface
+  .ProseMirror
+  p:not([data-style-id="Cite"]):not([data-f8-cite="true"])
+  em,
+.editor-page.invisibility-mode
+  .editor-surface
+  .ProseMirror
+  p:not([data-style-id="Cite"]):not([data-f8-cite="true"])
+  u {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--editor-text);
+}
+
+.editor-page.invisibility-mode
+  .editor-surface
+  .ProseMirror
+  p:not([data-style-id="Cite"]):not([data-f8-cite="true"])
+  mark {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--editor-highlight-fg);
+}
+
+.editor-page.invisibility-mode .editor-surface .ProseMirror p[data-style-id="Cite"],
+.editor-page.invisibility-mode .editor-surface .ProseMirror p[data-f8-cite="true"] {
+  font-size: 1.05rem;
+  line-height: 1.52;
+  color: var(--editor-text);
+}
+
+.editor-surface .ProseMirror::selection,
+.editor-surface .ProseMirror *::selection {
+  background: var(--editor-selection);
+}
+
+.ribbon-btn:disabled,
+.tab-bar-menu:disabled,
+.picker-open-link:disabled,
+.wordmark:disabled,
+.sidebar-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ribbon-btn:hover:not(:disabled),
+.tab-bar-menu:hover:not(:disabled),
+.picker-open-link:hover:not(:disabled),
+.wordmark:hover:not(:disabled),
+.outline-item-button:hover,
+.sidebar-toggle:hover:not(:disabled) {
+  transform: none;
+}
+
+@media (max-width: 960px) {
+  .picker-screen {
+    padding: 1.5rem;
+  }
+}

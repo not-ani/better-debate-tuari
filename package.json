@@ -1,25 +1,17 @@
 {
-  "name": "better-debate-tuari",
-  "version": "0.1.0",
-  "description": "",
+  "name": "better-debate-tauri",
+  "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "vite",
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview",
-    "tauri": "tauri"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "solid-js": "^1.9.3",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
-  },
-  "devDependencies": {
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3",
-    "vite-plugin-solid": "^2.11.0",
-    "@tauri-apps/cli": "^2"
+    "dev:blockvault": "bun run --cwd apps/blockvault tauri dev",
+    "dev:tex": "bun run --cwd apps/tex tauri dev",
+    "build:blockvault": "bun run --cwd apps/blockvault tauri build",
+    "build:tex": "bun run --cwd apps/tex tauri build",
+    "build:ui-solid": "bun run --cwd packages/ui-solid build",
+    "build:tex-ui": "bun run --cwd packages/tex-ui-solid build"
   }
 }

@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "crates/better-debate-core",
+  "crates/better-debate-tauri-host",
+  "apps/blockvault/src-tauri",
+  "apps/tex/src-tauri"
+]
+resolver = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"

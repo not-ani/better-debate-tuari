@@ -1,0 +1,29 @@
+{
+  "name": "@acme/ui-solid",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "bench": "bun src/benchmark.ts"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2",
+    "@dnd-kit/solid": "^0.3.0",
+    "solid-js": "^1.9.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

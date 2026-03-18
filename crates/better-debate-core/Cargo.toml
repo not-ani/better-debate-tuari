@@ -1,0 +1,28 @@
+[package]
+name = "better-debate-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "better_debate_core"
+crate-type = ["rlib"]
+
+[dependencies]
+arrow-array = "57.2"
+arrow-schema = "57.2"
+blake3 = "1"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+docx-rs = "0.4"
+futures = "0.3"
+lancedb = "0.26.2"
+ort = "=2.0.0-rc.11"
+rayon = "1.10"
+roxmltree = "0.20"
+rusqlite = { version = "0.32", features = ["bundled-full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tantivy = "0.24.2"
+tokenizers = "0.19.1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+walkdir = "2.5"
+zip = { version = "2.2", default-features = true }
