@@ -93,7 +93,7 @@ jobs:
           )
           PY
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@dev
         with:
           projectPath: apps/tex
           tagName: tex-v__VERSION__
